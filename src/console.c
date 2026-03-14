@@ -96,6 +96,12 @@ static const char *meow_suffixes[] = {
 	""
 };
 
+static uint8_t meow_colors[] = {
+	212,
+	176,
+	177
+};
+
 void console_thread_create(void)
 {
 #if USB_EXISTS
@@ -312,13 +318,204 @@ static void print_meow(void)
 {
 	int64_t ticks = k_uptime_ticks();
 
-	ticks %= ARRAY_SIZE(meows) * ARRAY_SIZE(meow_punctuations) * ARRAY_SIZE(meow_suffixes); // silly number generator
-	uint8_t meow = ticks / (ARRAY_SIZE(meow_punctuations) * ARRAY_SIZE(meow_suffixes));
-	ticks %= (ARRAY_SIZE(meow_punctuations) * ARRAY_SIZE(meow_suffixes));
-	uint8_t punctuation = ticks / ARRAY_SIZE(meow_suffixes);
-	uint8_t suffix = ticks % ARRAY_SIZE(meow_suffixes);
+	ticks %= ARRAY_SIZE(meows) * ARRAY_SIZE(meow_punctuations) * ARRAY_SIZE(meow_suffixes) * ARRAY_SIZE(meow_colors); // silly number generator
+	uint8_t meow = ticks / (ARRAY_SIZE(meow_punctuations) * ARRAY_SIZE(meow_suffixes) * ARRAY_SIZE(meow_colors));
+	ticks %= ARRAY_SIZE(meow_punctuations) * ARRAY_SIZE(meow_suffixes) * ARRAY_SIZE(meow_colors);
+	uint8_t punctuation = ticks / (ARRAY_SIZE(meow_suffixes) * ARRAY_SIZE(meow_colors));
+	ticks %= ARRAY_SIZE(meow_suffixes) * ARRAY_SIZE(meow_colors);
+	uint8_t suffix = ticks / ARRAY_SIZE(meow_suffixes);
+	uint8_t color = ticks % ARRAY_SIZE(meow_colors);
 
-	printk("%s%s%s\n", meows[meow], meow_punctuations[punctuation], meow_suffixes[suffix]);
+	printk("\033[38;5;%d;1m%s%s\033[0;38;2;255;255;255m%s\033[0m\n", meow_colors[color], meows[meow], meow_punctuations[punctuation], meow_suffixes[suffix]);
+}
+
+static int32_t parse_config_settings_id(char *s)
+{
+	int32_t id = parse_i32(s, 10);
+	uint8_t buf[12];
+	snprintk(buf, 12, "%d", id);
+	if (strcmp(buf, s) != 0)
+		return -1;
+	return id;
+}
+
+static int parse_config_settings_write(char *s, int32_t v)
+{
+	int32_t id = parse_config_settings_id(s);
+	uint16_t k = 0;
+	int err = -1;
+	for (int i = 0; i < CONFIG_SETTINGS_COUNT; i++)
+	{
+		for (int j = 0; j < config_settings_count[i]; j++)
+		{
+			if (id < 0 ? strcmp(s, config_settings_names[k]) == 0 : id == k)
+			{
+				switch (i)
+				{
+				case 0:
+					if (v < 0 || v > 1)
+						break;
+					config_0_settings_write(j, v);
+					err = 0;
+					break;
+				case 1:
+					if (v < 0 || v > 1)
+						break;
+					config_1_settings_write(j, v);
+					err = 0;
+					break;
+				case 2:
+					if (v < INT16_MIN || v > INT16_MAX)
+						break;
+					config_2_settings_write(j, v);
+					err = 0;
+					break;
+				case 3:
+					config_3_settings_write(j, v);
+					err = 0;
+					break;
+				default:
+					break;
+				}
+				if (!err)
+					printk("Updated config: %s=%d\n", config_settings_names[k], v);
+				else
+					printk("Invalid value\n");
+				return err;
+			}
+			k++;
+		}
+	}
+	printk("Invalid config name or id\n");
+	return -1;
+}
+
+static void parse_config_settings_read(char *s)
+{
+	int32_t id = parse_config_settings_id(s);
+	uint16_t k = 0;
+	for (int i = 0; i < CONFIG_SETTINGS_COUNT; i++)
+	{
+		for (int j = 0; j < config_settings_count[i]; j++)
+		{
+			if (id < 0 ? strcmp(s, config_settings_names[k]) == 0 : id == k)
+			{
+				int32_t val = -1;
+				switch (i)
+				{
+				case 0:
+					val = CONFIG_0_SETTINGS_READ(j) ? 1 : 0;
+					break;
+				case 1:
+					val = CONFIG_1_SETTINGS_READ(j) ? 1 : 0;
+					break;
+				case 2:
+					val = CONFIG_2_SETTINGS_READ(j);
+					break;
+				case 3:
+					val = CONFIG_3_SETTINGS_READ(j);
+					break;
+				default:
+					break;
+				}
+				printk("Read config: %s=%d\n", config_settings_names[k], val);
+				return;
+			}
+			k++;
+		}
+	}
+	printk("Invalid config name or id\n");
+}
+
+static void parse_config_settings_read_all()
+{
+	uint16_t k = 0;
+	for (int i = 0; i < CONFIG_SETTINGS_COUNT; i++)
+	{
+		for (int j = 0; j < config_settings_count[i]; j++)
+		{
+			int32_t val = -1;
+			switch (i)
+			{
+			case 0:
+				val = CONFIG_0_SETTINGS_READ(j) ? 1 : 0;
+				break;
+			case 1:
+				val = CONFIG_1_SETTINGS_READ(j) ? 1 : 0;
+				break;
+			case 2:
+				val = CONFIG_2_SETTINGS_READ(j);
+				break;
+			case 3:
+				val = CONFIG_3_SETTINGS_READ(j);
+				break;
+			default:
+				break;
+			}
+			printk("Read config: %s=%d\n", config_settings_names[k], val);
+			k++;
+		}
+	}
+}
+
+static int parse_config_settings_reset(char *s)
+{
+	int32_t id = parse_config_settings_id(s);
+	uint16_t k = 0;
+	for (int i = 0; i < CONFIG_SETTINGS_COUNT; i++)
+	{
+		for (int j = 0; j < config_settings_count[i]; j++)
+		{
+			if (id < 0 ? strcmp(s, config_settings_names[k]) == 0 : id == k)
+			{
+				config_settings_reset(i, j);
+				return 0;
+			}
+			k++;
+		}
+	}
+	printk("Invalid config name or id\n");
+	return -1;
+}
+
+static inline void strtolower(char *str)
+{
+	for (int i = 0; str[i]; i++)
+		str[i] = tolower(str[i]);
+}
+
+static void print_help(void)
+{
+	printk("\nhelp                         Display this help text\n");
+
+	printk("\ninfo                         Get device information\n");
+	printk("uptime                       Get device uptime\n");
+	printk("reboot                       Soft reset the device\n");
+	printk("battery                      Get battery information\n");
+	printk("\nscan                         Restart sensor scan\n");
+	printk("calibrate                    Calibrate sensor ZRO\n");
+	printk("6-side                       Calibrate 6-side accelerometer\n");
+#if SENSOR_MAG_EXISTS
+	printk("mag                          Clear magnetometer calibration\n");
+#endif
+	printk("\nset <address>                Manually set receiver\n");
+	printk("pair                         Enter pairing mode\n");
+	printk("clear                        Clear pairing data\n");
+#if DFU_EXISTS
+	printk("\ndfu                          Enter DFU bootloader\n");
+#endif
+	printk("\nmeow                         Meow!\n");
+
+#if SENSOR_MAG_EXISTS
+	printk("\nreset_data (zro|acc|mag|bat|all)\n");
+#else
+	printk("\nreset_data (zro|acc|bat|all)\n");
+#endif
+
+	printk("\nlist_config                  Display available settings\n");
+	printk("write_config (base64|<config name>|<config id>) <value>\n");
+	printk("read_config (all|base64|<config name>|<config id>)\n");
+	printk("reset_config (all|<config name>|<config id>)\n");
 }
 
 static int32_t parse_config_settings_id(char *s)

@@ -19,6 +19,8 @@
 
 #define SETTINGS_ID 30
 
+#define MAIN_SENSOR_DATA_ID 31
+
 void configure_sense_pins(void);
 
 uint8_t reboot_counter_read(void);
