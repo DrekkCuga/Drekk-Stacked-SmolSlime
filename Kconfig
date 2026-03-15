@@ -116,7 +116,7 @@ config USER_SHUTDOWN
 
 config USE_IMU_WAKE_UP
     bool "IMU wake up support"
-    default y
+    default n
     help
         Use IMU wake up state if IMU wake up is present.
 
@@ -247,7 +247,7 @@ config SENSOR_GYRO_FS
 
 config SENSOR_USE_MAG
     bool "Magnetometer support"
-    default y
+    default n
     help
         Use magnetometer if it is present.
 
