@@ -7,7 +7,7 @@ CMakeFiles/
 generated/
 # build
 /build*/
-
+/**/*log
 # version
 VERSION
 /**/zephyr/*.bin
