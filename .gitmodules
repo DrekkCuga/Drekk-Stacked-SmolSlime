@@ -1,9 +1,12 @@
 [submodule "vqf-c"]
 	path = vqf-c
 	url = https://github.com/sctanf/vqf-c/
+	ignore = all
 [submodule "Fusion"]
 	path = Fusion
 	url = https://github.com/xioTechnologies/Fusion
+	ignore = all
 [submodule "NXP-ISSDK-SensorFusion"]
 	path = NXP-ISSDK-SensorFusion
 	url = https://github.com/sctanf/NXP-ISSDK-SensorFusion/
+	ignore = all

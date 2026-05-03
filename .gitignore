@@ -1,9 +1,18 @@
 # editors
 *.swp
 *~
-
+*.tmp
+*.cmake
+CMakeFiles/
+generated/
 # build
 /build*/
 
 # version
 VERSION
+/**/zephyr/*.bin
+/**/zephyr/*.hex
+/**/zephyr/*.elf
+/**/zephyr/*.map
+/**/zephyr/*.stat
+/**/zephyr/*.uf2
